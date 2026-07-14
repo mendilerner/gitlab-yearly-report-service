@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# Virtual environments
+.venv/
+
+# Environment / secrets
+.env
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+
+# Assignment source docs (kept local, not part of the deliverable)
+Mobileye_DevOps_IT_Home_Assignment_2026.pdf
+PLAN.md

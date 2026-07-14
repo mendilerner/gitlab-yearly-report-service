@@ -1,0 +1,9 @@
+# Normalize line endings: store everything as LF in the repo.
+# Prevents CRLF from leaking in on Windows and breaking tooling on the Linux
+# container (Phase 4). Overrides per-user core.autocrlf settings.
+* text=auto eol=lf
+
+# Explicit binary types — never touch these.
+*.pdf binary
+*.png binary
+*.ico binary
