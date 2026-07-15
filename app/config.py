@@ -44,6 +44,5 @@ def get_settings() -> Settings:
     except ValidationError as exc:
         fields = ", ".join(str(err["loc"][0]).upper() for err in exc.errors())
         raise ConfigError(
-            f"Invalid or missing configuration ({fields}). "
-            "Set GITLAB_URL and GITLAB_TOKEN environment variables."
+            f"Invalid or missing configuration ({fields})."
         ) from exc
