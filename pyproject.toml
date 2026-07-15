@@ -9,6 +9,11 @@ dependencies = [
     "uvicorn>=0.51.0",
 ]
 
+[project.optional-dependencies]
+mcp = [
+    "mcp>=1.28.1",
+]
+
 [dependency-groups]
 dev = [
     "pytest>=9.1.1",

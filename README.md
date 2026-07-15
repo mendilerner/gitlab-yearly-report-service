@@ -102,12 +102,39 @@ Errors return `{"detail": "..."}` with the matching status:
 | `404`  | Project not found.                                          |
 | `502`  | GitLab unavailable, timed out, or returned an error.        |
 
+## MCP server (bonus)
+
+The same two functions are also exposed as **MCP tools** (`get_issues_by_year`,
+`get_merge_requests_by_year`) over stdio, reusing the exact same `ReportService` as the REST API —
+no GitLab logic is duplicated. The MCP SDK is an optional extra, so it is not part of the
+web-service Docker image.
+
+**Run** (reads `GITLAB_URL` / `GITLAB_TOKEN` from the environment or `.env`, same as the service):
+
+```bash
+uv sync --extra mcp
+uv run --extra mcp python -m mcp_server.server
+```
+
+**Test** with the MCP Inspector (requires Node) — a UI to list and invoke the tools. Pass the
+GitLab env with `-e`:
+
+```bash
+npx @modelcontextprotocol/inspector \
+  -e GITLAB_URL=https://gitlab.com -e GITLAB_TOKEN=glpat-... \
+  uv run --extra mcp python -m mcp_server.server
+```
+
+In the browser UI it opens: confirm **Connected**, open the **Tools** tab, click **List Tools**
+(it does not auto-populate), then select `get_issues_by_year`, enter a `year` (e.g. `2025`), and
+click **Run** to see the result.
+
 ## Design decisions
 
 - **Shared core, exposed once.** All GitLab logic lives in `app/gitlab_client.py` (transport:
   pagination, auth header, error mapping) and `app/service.py` (`ReportService`: year bounds,
-  scope, response shaping). The API is a thin layer over it — and the bonus MCP server can reuse
-  the same `ReportService` without duplicating anything.
+  scope, response shaping). Both the REST API and the MCP server are thin layers over the same
+  `ReportService` — GitLab logic is written once and exposed twice.
 - **Server-side year filtering.** Filtering is pushed to GitLab via `created_after` /
   `created_before` (UTC year boundaries), never by fetching everything and filtering in Python.
 - **Read-only by construction.** The client only ever issues `GET` requests.
@@ -127,6 +154,8 @@ surfaces this as `502`. This is a GitLab.com scale limitation, not a defect here
 queries work everywhere. Where instance-wide scope is impractical, GitLab's group endpoints
 (`GET /groups/:id/issues`) aggregate across a group's projects without the timeout, at a narrower
 scope than "entire instance."
+
+Instance-wide queries work correctly against a local **GitLab EE 18.10** playground.
 
 ## Development
 
