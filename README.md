@@ -45,14 +45,15 @@ Configuration is via environment variables only (see [`.env.example`](./.env.exa
 | `GET /merge-requests?year=YYYY&project=<id-or-path>`  | Merge requests created in `year`.    |
 
 - `year` is **required**, a 4-digit integer. Missing or invalid → **400**.
-- `project` is **optional**: a numeric ID (`42`) or URL path (`mygroup/my-project`). Omit it for
-  an instance-wide report.
+- `project` is **optional**: a numeric ID (`42`) or a project path with the slash URL-encoded as
+  `%2F` (`mygroup%2Fmy-project`). Omit it for an instance-wide report. (A raw slash also works — the
+  service re-encodes it before calling GitLab — but `%2F` is the portable form.)
 
 ### Examples
 
 ```bash
-# Issues in one project, by path
-curl "http://localhost:8080/issues?year=2025&project=mygroup/my-project"
+# Issues in one project, by path (slash encoded as %2F)
+curl "http://localhost:8080/issues?year=2025&project=mygroup%2Fmy-project"
 
 # Merge requests in one project, by numeric ID
 curl "http://localhost:8080/merge-requests?year=2025&project=42"
