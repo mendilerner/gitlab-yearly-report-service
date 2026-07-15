@@ -11,12 +11,12 @@ startup via the lifespan below.
 """
 
 from contextlib import asynccontextmanager
+from typing import Annotated
 
-from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
-from app import service
 from app.gitlab_client import (
     GitLabAuthError,
     GitLabError,
@@ -25,7 +25,7 @@ from app.gitlab_client import (
     GitLabUnavailableError,
 )
 from app.models import ReportResponse
-from app.service import get_issues_by_year, get_merge_requests_by_year
+from app.service import ReportService, create_client
 
 # GitLab client exception -> HTTP status. Base GitLabError falls through to 502.
 _GITLAB_STATUS: dict[type[GitLabError], int] = {
@@ -37,20 +37,32 @@ _GITLAB_STATUS: dict[type[GitLabError], int] = {
 
 
 @asynccontextmanager
-async def lifespan(_app: FastAPI):
+async def lifespan(app: FastAPI):
     # create_client() calls get_settings(), which raises ConfigError if
     # GITLAB_URL / GITLAB_TOKEN are missing -> uvicorn fails to start with a
-    # clear message (assignment requirement). One shared client for the process.
-    client = service.create_client()
-    service.use_client(client)
+    # clear message (assignment requirement). One shared client/service for the
+    # process, held on app.state (no module-level global).
+    client = create_client()
+    app.state.service = ReportService(client)
     try:
         yield
     finally:
         await client.aclose()
-        service.use_client(None)
 
 
 app = FastAPI(title="GitLab Yearly Report Service", lifespan=lifespan)
+
+
+def get_service(request: Request) -> ReportService:
+    """The single place that reads the shared service off app.state.
+
+    Injected via Depends so routes stay clean and typed, and tests can override
+    it with app.dependency_overrides[get_service].
+    """
+    return request.app.state.service
+
+
+ServiceDep = Annotated[ReportService, Depends(get_service)]
 
 
 def _clean_project(project: str | None) -> str | None:
@@ -69,18 +81,20 @@ async def health() -> dict[str, str]:
 
 @app.get("/issues", response_model=ReportResponse)
 async def issues(
+    service: ServiceDep,
     year: int = Query(..., ge=1000, le=9999, description="4-digit year, e.g. 2025"),
     project: str | None = Query(None, description="Project ID or path; omit for instance-wide"),
 ) -> ReportResponse:
-    return await get_issues_by_year(year, _clean_project(project))
+    return await service.get_issues_by_year(year, _clean_project(project))
 
 
 @app.get("/merge-requests", response_model=ReportResponse)
 async def merge_requests(
+    service: ServiceDep,
     year: int = Query(..., ge=1000, le=9999, description="4-digit year, e.g. 2025"),
     project: str | None = Query(None, description="Project ID or path; omit for instance-wide"),
 ) -> ReportResponse:
-    return await get_merge_requests_by_year(year, _clean_project(project))
+    return await service.get_merge_requests_by_year(year, _clean_project(project))
 
 
 @app.exception_handler(RequestValidationError)
