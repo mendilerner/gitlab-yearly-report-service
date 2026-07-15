@@ -25,7 +25,7 @@ from app.gitlab_client import (
     GitLabUnavailableError,
 )
 from app.models import ReportResponse
-from app.service import ReportService, create_client
+from app.service import MAX_YEAR, MIN_YEAR, ReportService, create_client
 
 # GitLab client exception -> HTTP status. Base GitLabError falls through to 502.
 _GITLAB_STATUS: dict[type[GitLabError], int] = {
@@ -82,7 +82,7 @@ async def health() -> dict[str, str]:
 @app.get("/issues", response_model=ReportResponse)
 async def issues(
     service: ServiceDep,
-    year: int = Query(..., ge=1000, le=9999, description="4-digit year, e.g. 2025"),
+    year: int = Query(..., ge=MIN_YEAR, le=MAX_YEAR, description="4-digit year, e.g. 2025"),
     project: str | None = Query(None, description="Project ID or path; omit for instance-wide"),
 ) -> ReportResponse:
     return await service.get_issues_by_year(year, _clean_project(project))
@@ -91,7 +91,7 @@ async def issues(
 @app.get("/merge-requests", response_model=ReportResponse)
 async def merge_requests(
     service: ServiceDep,
-    year: int = Query(..., ge=1000, le=9999, description="4-digit year, e.g. 2025"),
+    year: int = Query(..., ge=MIN_YEAR, le=MAX_YEAR, description="4-digit year, e.g. 2025"),
     project: str | None = Query(None, description="Project ID or path; omit for instance-wide"),
 ) -> ReportResponse:
     return await service.get_merge_requests_by_year(year, _clean_project(project))

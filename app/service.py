@@ -21,6 +21,13 @@ from app.models import (
 )
 
 
+# The spec defines year as a 4-digit value. The core enforces it so non-HTTP
+# callers (MCP) reject out-of-range years too; the REST layer additionally
+# declares these bounds on its query param for a 400 at the edge and OpenAPI docs.
+MIN_YEAR = 1000
+MAX_YEAR = 9999
+
+
 def _year_bounds(year: int) -> tuple[str, str]:
     """Inclusive UTC boundaries for a calendar year.
 
@@ -95,6 +102,8 @@ class ReportService:
         year: int,
         project_id_or_path: str | int | None,
     ) -> ReportResponse:
+        if not MIN_YEAR <= year <= MAX_YEAR:
+            raise ValueError(f"year must be a 4-digit year ({MIN_YEAR}-{MAX_YEAR})")
         created_after, created_before = _year_bounds(year)
         params: dict[str, Any] = {
             "created_after": created_after,
