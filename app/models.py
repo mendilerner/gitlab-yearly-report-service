@@ -24,6 +24,15 @@ class ItemSummary(BaseModel):
     web_url: str = ""
     project_id: int | None = None
 
+    @classmethod
+    def from_gitlab(cls, raw: dict) -> "ItemSummary":
+        """Build a summary from a raw GitLab item; extra fields are ignored.
+
+        A subclass can override this if its resource ever needs custom mapping;
+        today the shared field set is enough, so both use this as-is.
+        """
+        return cls.model_validate(raw)
+
 
 class IssueSummary(ItemSummary):
     pass

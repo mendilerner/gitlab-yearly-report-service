@@ -34,7 +34,7 @@ Configuration is via environment variables only (see [`.env.example`](./.env.exa
 | -------------- | -------- | ----------------------------------------------------------------- |
 | `GITLAB_URL`   | yes      | GitLab base URL, e.g. `https://gitlab.com`.                       |
 | `GITLAB_TOKEN` | yes      | Personal-access or project token with **read** permissions.       |
-| `MAX_PAGES`    | no       | Pagination safety cap (default 50 → 5,000 items). When hit, `truncated: true`. |
+| `MAX_PAGES`    | no       | Pagination safety cap (default 10 → 1,000 items). When hit, `truncated: true`. |
 
 ## API
 
@@ -79,7 +79,7 @@ Raw GitLab objects are large and noisy, so the service returns a normalized slic
       "iid": 7,
       "title": "Fix flaky pipeline",
       "state": "closed",
-      "author": { "username": "mendi", "name": "Mendi Lerner" },
+      "author": { "username": "jdoe", "name": "Jane Doe" },
       "created_at": "2025-03-14T09:12:00.000Z",
       "web_url": "https://gitlab.com/mygroup/my-project/-/issues/7",
       "project_id": 42
@@ -150,10 +150,8 @@ endpoints with `scope=all` (all issues/MRs the token can see), as the spec requi
 instance this is fast. On **GitLab.com specifically**, the unfiltered `scope=all` query exceeds
 GitLab's database statement timeout and returns `500` after ~15s (a long-standing GitLab issue,
 [gitlab-org/gitlab#22699](https://gitlab.com/gitlab-org/gitlab/-/issues/22699)); the service
-surfaces this as `502`. This is a GitLab.com scale limitation, not a defect here — project-scoped
-queries work everywhere. Where instance-wide scope is impractical, GitLab's group endpoints
-(`GET /groups/:id/issues`) aggregate across a group's projects without the timeout, at a narrower
-scope than "entire instance."
+surfaces this as `502`. Project-scoped queries work everywhere; instance-wide scope is bounded by
+GitLab.com's timeout, not by the service.
 
 Instance-wide queries work correctly against a local **GitLab EE 18.10** playground.
 

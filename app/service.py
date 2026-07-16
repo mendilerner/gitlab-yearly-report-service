@@ -13,7 +13,6 @@ from urllib.parse import quote
 from app.config import get_settings
 from app.gitlab_client import GitLabClient
 from app.models import (
-    Author,
     IssueSummary,
     ItemSummary,
     MergeRequestSummary,
@@ -28,6 +27,15 @@ MIN_YEAR = 1000
 MAX_YEAR = 9999
 
 
+class InvalidYearError(ValueError):
+    """The year argument is not a 4-digit year.
+
+    A dedicated type (still a ``ValueError``) so callers can distinguish this
+    known input-contract violation from an unrelated ``ValueError`` bug and give
+    it a precise message.
+    """
+
+
 def _year_bounds(year: int) -> tuple[str, str]:
     """Inclusive UTC boundaries for a calendar year.
 
@@ -39,22 +47,6 @@ def _year_bounds(year: int) -> tuple[str, str]:
     since that instant is inclusive in both years.
     """
     return f"{year}-01-01T00:00:00Z", f"{year}-12-31T23:59:59.999999Z"
-
-
-def _summarize(model: type[ItemSummary], raw: dict[str, Any]) -> ItemSummary:
-    author = raw.get("author")
-    return model(
-        id=raw["id"],
-        iid=raw.get("iid"),
-        title=raw.get("title", ""),
-        state=raw.get("state", ""),
-        author=Author(username=author.get("username"), name=author.get("name"))
-        if author
-        else None,
-        created_at=raw.get("created_at", ""),
-        web_url=raw.get("web_url", ""),
-        project_id=raw.get("project_id"),
-    )
 
 
 def create_client() -> GitLabClient:
@@ -103,7 +95,9 @@ class ReportService:
         project_id_or_path: str | int | None,
     ) -> ReportResponse:
         if not MIN_YEAR <= year <= MAX_YEAR:
-            raise ValueError(f"year must be a 4-digit year ({MIN_YEAR}-{MAX_YEAR})")
+            raise InvalidYearError(
+                f"year must be a 4-digit year ({MIN_YEAR}-{MAX_YEAR})"
+            )
         created_after, created_before = _year_bounds(year)
         params: dict[str, Any] = {
             "created_after": created_after,
@@ -120,7 +114,7 @@ class ReportService:
             params["scope"] = "all"
 
         items, truncated = await self._client.collect(path, params)
-        summaries = [_summarize(model, raw) for raw in items]
+        summaries = [model.from_gitlab(raw) for raw in items]
         return ReportResponse(
             count=len(summaries), truncated=truncated, items=summaries
         )
