@@ -54,7 +54,7 @@ class GitLabClient:
         base_url: str,
         token: str,
         *,
-        max_pages: int = 50,
+        max_pages: int = 10,
         timeout: float = DEFAULT_TIMEOUT,
     ) -> None:
         self._max_pages = max_pages
@@ -120,10 +120,12 @@ class GitLabClient:
             response = await self._get(
                 path, {**params, "per_page": PER_PAGE, "page": next_page}
             )
-            # X-Next-Page is a page number, or empty on the last page. Parse to
-            # int so a literal "0" is treated as "no more pages", not truthy.
+            # X-Next-Page is a page number, or empty on the last page. Only trust
+            # a plain ASCII-numeric header; anything unexpected -> stop (no more
+            # pages) rather than raising ValueError. isascii() rules out Unicode
+            # digits that isdigit() accepts but int() rejects; both are False for "".
             header = response.headers.get("X-Next-Page", "").strip()
-            next_page = int(header) if header else 0
+            next_page = int(header) if header.isascii() and header.isdigit() else 0
             yield response.json(), bool(next_page)
 
     async def collect(

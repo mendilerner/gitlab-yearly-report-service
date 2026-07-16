@@ -34,7 +34,7 @@ Configuration is via environment variables only (see [`.env.example`](./.env.exa
 | -------------- | -------- | ----------------------------------------------------------------- |
 | `GITLAB_URL`   | yes      | GitLab base URL, e.g. `https://gitlab.com`.                       |
 | `GITLAB_TOKEN` | yes      | Personal-access or project token with **read** permissions.       |
-| `MAX_PAGES`    | no       | Pagination safety cap (default 50 → 5,000 items). When hit, `truncated: true`. |
+| `MAX_PAGES`    | no       | Pagination safety cap (default 10 → 1,000 items). When hit, `truncated: true`. |
 
 ## API
 
