@@ -129,20 +129,6 @@ In the browser UI it opens: confirm **Connected**, open the **Tools** tab, click
 (it does not auto-populate), then select `get_issues_by_year`, enter a `year` (e.g. `2025`), and
 click **Run** to see the result.
 
-## Design decisions
-
-- **Shared core, exposed once.** All GitLab logic lives in `app/gitlab_client.py` (transport:
-  pagination, auth header, error mapping) and `app/service.py` (`ReportService`: year bounds,
-  scope, response shaping). Both the REST API and the MCP server are thin layers over the same
-  `ReportService` — GitLab logic is written once and exposed twice.
-- **Server-side year filtering.** Filtering is pushed to GitLab via `created_after` /
-  `created_before` (UTC year boundaries), never by fetching everything and filtering in Python.
-- **Read-only by construction.** The client only ever issues `GET` requests.
-- **Bounded pagination.** Pages are followed via the `X-Next-Page` header at `per_page=100`, up to
-  `MAX_PAGES`; hitting the cap sets `truncated: true` instead of running unbounded.
-- **Strict error contract.** Missing/invalid `year` returns **400** (FastAPI's default is 422, so
-  it's overridden). GitLab errors map to typed exceptions → `401/403/404/502`.
-
 ## Known limitations
 
 **Instance-wide queries on GitLab.com.** With `project` omitted, the service uses GitLab's global
