@@ -120,10 +120,8 @@ class GitLabClient:
             response = await self._get(
                 path, {**params, "per_page": PER_PAGE, "page": next_page}
             )
-            # X-Next-Page is a page number, or empty on the last page. Only trust
-            # a plain ASCII-numeric header; anything unexpected -> stop (no more
-            # pages) rather than raising ValueError. isascii() rules out Unicode
-            # digits that isdigit() accepts but int() rejects; both are False for "".
+            # X-Next-Page is a page number, empty on the last page. Only trust a
+            # plain ASCII-numeric value; anything else stops pagination safely.
             header = response.headers.get("X-Next-Page", "").strip()
             next_page = int(header) if header.isascii() and header.isdigit() else 0
             yield response.json(), bool(next_page)

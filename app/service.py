@@ -37,15 +37,9 @@ class InvalidYearError(ValueError):
 
 
 def _year_bounds(year: int) -> tuple[str, str]:
-    """Inclusive UTC boundaries for a calendar year.
-
-    GitLab's ``created_after`` / ``created_before`` are both *inclusive* ("on or
-    after" / "on or before"), verified against the API. We end the range at the
-    last microsecond of the year (GitLab stores ``created_at`` at microsecond
-    precision), so adjacent years stay disjoint: using next-year midnight would
-    double-count an item created at exactly Jan 1 00:00:00 of the following year,
-    since that instant is inclusive in both years.
-    """
+    """UTC boundaries for a calendar year. GitLab's created_after/created_before
+    are both inclusive, so we end at the last microsecond of the year to keep
+    adjacent years disjoint (next-year midnight would double-count)."""
     return f"{year}-01-01T00:00:00Z", f"{year}-12-31T23:59:59.999999Z"
 
 
