@@ -38,10 +38,8 @@ _GITLAB_STATUS: dict[type[GitLabError], int] = {
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # create_client() calls get_settings(), which raises ConfigError if
-    # GITLAB_URL / GITLAB_TOKEN are missing -> uvicorn fails to start with a
-    # clear message (assignment requirement). One shared client/service for the
-    # process, held on app.state (no module-level global).
+    # create_client() raises ConfigError if GITLAB_URL / GITLAB_TOKEN are missing,
+    # so uvicorn fails fast at startup. One shared client/service on app.state.
     client = create_client()
     app.state.service = ReportService(client)
     try:
@@ -54,11 +52,8 @@ app = FastAPI(title="GitLab Yearly Report Service", lifespan=lifespan)
 
 
 def get_service(request: Request) -> ReportService:
-    """The single place that reads the shared service off app.state.
-
-    Injected via Depends so routes stay clean and typed, and tests can override
-    it with app.dependency_overrides[get_service].
-    """
+    """Read the shared service off app.state (injected via Depends; overridable
+    in tests with app.dependency_overrides)."""
     return request.app.state.service
 
 

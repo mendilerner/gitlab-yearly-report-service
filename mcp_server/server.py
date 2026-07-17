@@ -1,14 +1,9 @@
 """MCP server exposing the yearly-report functions as tools over stdio.
 
-A second front end over the same core as the REST API: both build a
-``ReportService`` (``app/service.py``) and call it. No GitLab logic is
-duplicated here — this module only adapts the service to MCP's tool interface.
-
-The one MCP-specific concern handled here is *error shaping for an LLM caller*.
-The core raises the same typed exceptions the REST layer maps to HTTP codes; we
-translate them into short, actionable messages so the model can tell apart the
-three things it might need to do — fix the input, retry later, or report the
-problem and stop — instead of receiving a raw GitLab body or stack trace.
+A second front end over the same ``ReportService`` as the REST API -- no GitLab
+logic is duplicated. The one MCP-specific concern is shaping the core's typed
+exceptions into short, actionable messages for an LLM caller (see
+``mcp_server.errors``).
 """
 
 from mcp.server.fastmcp import FastMCP
@@ -20,20 +15,17 @@ from mcp_server.errors import to_tool_error
 
 mcp = FastMCP("gitlab-yearly-report")
 
-# One shared service for the process. create_client() reads GITLAB_URL /
-# GITLAB_TOKEN and raises ConfigError if they are missing (same fail-fast
-# contract as the web service). Building it at import time is safe: the
-# httpx client only needs the event loop when a request is made.
+# One shared service for the process. create_client() raises ConfigError if
+# GITLAB_URL / GITLAB_TOKEN are missing (same fail-fast contract as the web
+# service); building it at import time is safe (no event loop needed until a call).
 _service = ReportService(create_client())
 
 
 async def _run(report_coro, project_id_or_path: str | None) -> dict:
     """Await a service call, converting known failures into a clean ToolError.
 
-    We catch only the core's declared exceptions (``InvalidYearError`` and the
-    ``GitLabError`` family); anything else propagates untouched so a real bug is
-    not disguised as one of these expected conditions. The message mapping lives
-    in ``mcp_server.errors``.
+    Catches only the core's declared exceptions (InvalidYearError and the
+    GitLabError family); anything else propagates untouched as a real bug.
     """
     try:
         report: ReportResponse = await report_coro

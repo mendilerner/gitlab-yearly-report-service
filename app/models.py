@@ -1,9 +1,7 @@
-"""Slim pydantic response models.
+"""Slim pydantic response models -- a normalized subset of the noisy GitLab JSON.
 
-Raw GitLab issue/MR objects are large and noisy; we return a normalized subset.
-IssueSummary and MergeRequestSummary are intentionally identical in shape today
-but kept distinct so either can evolve independently (e.g. MRs gaining
-merge-specific fields) without touching the other.
+IssueSummary and MergeRequestSummary are identical today but kept distinct so
+either can evolve independently.
 """
 
 from pydantic import BaseModel
@@ -26,11 +24,7 @@ class ItemSummary(BaseModel):
 
     @classmethod
     def from_gitlab(cls, raw: dict) -> "ItemSummary":
-        """Build a summary from a raw GitLab item; extra fields are ignored.
-
-        A subclass can override this if its resource ever needs custom mapping;
-        today the shared field set is enough, so both use this as-is.
-        """
+        """Build a summary from a raw GitLab item; extra fields are ignored."""
         return cls.model_validate(raw)
 
 
