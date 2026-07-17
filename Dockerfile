@@ -1,7 +1,7 @@
 # ---- build stage: resolve and install dependencies into a venv with uv ----
 FROM python:3.12-slim-bookworm AS build
 
-# uv, pinned, from its official image (build-time only — not in the final image).
+# uv (build-time only), pinned from its official image.
 COPY --from=ghcr.io/astral-sh/uv:0.11.23 /uv /bin/uv
 
 ENV UV_COMPILE_BYTECODE=1 \
@@ -9,25 +9,21 @@ ENV UV_COMPILE_BYTECODE=1 \
 
 WORKDIR /app
 
-# Dependencies only, in a layer cached on the lock files.
-#   --frozen  fail on a stale lock   --no-dev  drop test tooling
-#   --no-install-project  deps only; the app comes in as source
-#   --no-cache  don't keep uv's download cache
+# Install deps only (no dev, no project) in a layer cached on the lock files.
 COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev --no-install-project --no-cache
 
-# ---- runtime stage: just the venv + source, no uv / build tools ----
+# ---- runtime stage ----
 FROM python:3.12-slim-bookworm
 
 LABEL org.opencontainers.image.title="gitlab-yearly-report-service" \
       org.opencontainers.image.description="Read-only GitLab yearly issues/merge-requests reporting service" \
       org.opencontainers.image.source="https://github.com/mendilerner/gitlab-yearly-report-service"
 
-# Unprivileged user, created up front so COPY --chown sets ownership inline.
+# Unprivileged user.
 RUN useradd --create-home app
 WORKDIR /app
 
-# Copy the ready-built venv from the build stage and the application source.
 # Same base image in both stages, so the venv's interpreter symlinks stay valid.
 COPY --from=build --chown=app:app /app/.venv /app/.venv
 COPY --chown=app:app app/ ./app/
